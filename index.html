@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GR/IR Reconciliation Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#EEF0FB;--sf:#fff;--sf2:#F6F7FE;--bd:#E1E4F5;--tx:#171A3C;--tx2:#5B6088;--tx3:#9296B8;
+--ink:#14123A;--vio:#6C4DFF;--pink:#FF3D77;--pinkt:#FFE3EC;--amb:#FF9F1C;--ambt:#FFF1D9;--mint:#00B887;--mintt:#D8F7EC;--blu:#2F7BFF;--blut:#E1ECFF;--cy:#12B5D6;--cyt:#D9F4FA;
+--shadow:0 6px 24px rgba(40,30,120,.08)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0E0D24;--sf:#181638;--sf2:#1F1D45;--bd:#2D2A5C;--tx:#EEEFFF;--tx2:#A9ABD6;--tx3:#74779F;--pinkt:#4A1430;--ambt:#44300C;--mintt:#0D3A31;--blut:#17305E;--cyt:#0C3A47;--shadow:0 6px 24px rgba(0,0,0,.4)}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}button{font-family:inherit;cursor:pointer}
+#app{max-width:1440px;margin:0 auto;padding:0 20px 50px}
+/* hero header */
+.top{background:linear-gradient(120deg,#14123A 0%,#3B1D9E 55%,#6C4DFF 100%);color:#fff;border-radius:0 0 28px 28px;padding:22px 26px 26px;margin:0 -20px 20px;position:relative;overflow:hidden}
+.top:after{content:"";position:absolute;right:-60px;top:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,61,119,.55),rgba(255,61,119,0) 70%)}
+.top-row{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;position:relative;z-index:2}
+.top h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}.top p{margin:4px 0 0;font-size:12.5px;opacity:.75}
+.acts{display:flex;gap:9px;flex-wrap:wrap}
+.btn{border:0;border-radius:12px;padding:10px 16px;font-size:13px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;backdrop-filter:blur(6px);display:inline-flex;gap:7px;align-items:center}
+.btn:hover{background:rgba(255,255,255,.26)}.btn.pri{background:linear-gradient(135deg,#FF3D77,#FF9F1C);box-shadow:0 4px 14px rgba(255,61,119,.4)}
+.btn.solid{background:var(--vio);color:#fff}
+:focus-visible{outline:3px solid var(--amb);outline-offset:2px}
+/* empty */
+#emptyState{margin-top:30px;background:var(--sf);border:2px dashed var(--vio);border-radius:24px;padding:48px 24px;text-align:center;box-shadow:var(--shadow)}
+#emptyState.dragover{background:var(--sf2)}
+#emptyState h2{margin:0 0 8px;font-size:22px;font-weight:800}#emptyState p{color:var(--tx2);max-width:520px;margin:0 auto 22px;line-height:1.6;font-size:13.5px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;max-width:640px;margin:22px auto 0}
+.chips span{font-size:11.5px;font-weight:700;background:var(--blut);color:var(--blu);padding:5px 11px;border-radius:20px}
+.note{max-width:640px;margin:26px auto 0;text-align:left;background:var(--sf2);border-radius:16px;padding:16px 20px;font-size:12.5px;color:var(--tx2);line-height:1.75}
+.note ul{margin:6px 0 0;padding-left:18px}
+/* filters */
+.fbar{background:var(--sf);border-radius:20px;padding:14px 16px;box-shadow:var(--shadow);margin-bottom:18px;display:flex;flex-direction:column;gap:12px}
+.fr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.fl{font-size:12px;font-weight:800;color:var(--tx3);margin-right:4px;min-width:84px}
+.pill{border:1.5px solid var(--bd);background:var(--sf2);color:var(--tx2);font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:22px}
+.pill.active{background:var(--vio);border-color:var(--vio);color:#fff}
+.pill.s-c{color:var(--mint);background:var(--mintt);border-color:transparent}.pill.s-c.active{background:var(--mint);color:#fff}
+.pill.s-p{color:var(--blu);background:var(--blut);border-color:transparent}.pill.s-p.active{background:var(--blu);color:#fff}
+.pill.s-n{color:var(--pink);background:var(--pinkt);border-color:transparent;font-weight:800}.pill.s-n.active{background:var(--pink);color:#fff}
+.pill.s-k{color:var(--amb);background:var(--ambt);border-color:transparent}.pill.s-k.active{background:var(--amb);color:#fff}
+input[type=text],input[type=date],input[type=number]{font:inherit;font-size:12.5px;border:1.5px solid var(--bd);border-radius:11px;padding:8px 11px;background:var(--sf2);color:var(--tx)}
+.sw{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--tx2);border:1.5px solid var(--bd);background:var(--sf2);padding:6px 12px;border-radius:22px}
+.sw input{accent-color:var(--vio);width:16px;height:16px}
+.mat input{width:76px;text-align:right;padding:4px 8px}
+.dd{position:relative}.ddp{position:absolute;top:calc(100% + 8px);left:0;background:var(--sf);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--shadow);padding:10px;min-width:220px;z-index:40}
+.ddl{max-height:220px;overflow:auto}.ddp label{display:flex;gap:8px;align-items:center;padding:6px;font-size:12.5px;border-radius:8px}.ddp label:hover{background:var(--sf2)}
+.dda{display:flex;gap:6px;margin-top:8px}.dda button{flex:1;border:0;background:var(--blut);color:var(--blu);font-weight:700;font-size:11.5px;padding:6px;border-radius:8px}
+.spacer{flex:1}
+/* pending focus */
+.focus{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:1100px){.focus{grid-template-columns:1fr}}
+.hero{background:linear-gradient(135deg,#FF3D77,#FF7A45 60%,#FF9F1C);color:#fff;border-radius:24px;padding:22px;box-shadow:0 10px 30px rgba(255,61,119,.3);display:flex;flex-direction:column;gap:14px;cursor:pointer}
+.hero h2{margin:0;font-size:14px;font-weight:700;opacity:.9}
+.hero .big{font-size:46px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.hero .val{font-size:22px;font-weight:800}
+.hero .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hero .mini div{background:rgba(255,255,255,.2);border-radius:14px;padding:10px 12px}
+.hero .mini b{display:block;font-size:17px;font-weight:800}.hero .mini span{font-size:11px;opacity:.9}
+.card{background:var(--sf);border-radius:22px;padding:18px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 3px;font-size:14px;font-weight:800}.card .sub{font-size:11.5px;color:var(--tx3);margin-bottom:14px}
+.ag{display:flex;flex-direction:column;gap:11px}
+.agr{display:grid;grid-template-columns:62px 1fr 108px;gap:10px;align-items:center;font-size:12.5px}
+.agr .l{font-weight:700;color:var(--tx2)}.trk{height:12px;background:var(--sf2);border-radius:8px;overflow:hidden}.trk i{display:block;height:100%;border-radius:8px}
+.agr .v{text-align:right;font-weight:700}.agr .v small{display:block;font-weight:500;color:var(--tx3);font-size:10.5px}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:620px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{border-radius:20px;padding:15px;color:#fff;box-shadow:var(--shadow)}
+.kpi .k{font-size:11.5px;font-weight:700;opacity:.92}.kpi .n{font-size:24px;font-weight:800;margin:6px 0 2px;letter-spacing:-.02em}.kpi .s{font-size:11px;opacity:.85}
+.g1{background:linear-gradient(135deg,#6C4DFF,#9B7BFF)}.g2{background:linear-gradient(135deg,#00B887,#2FD9A6)}.g3{background:linear-gradient(135deg,#2F7BFF,#12B5D6)}
+.g4{background:linear-gradient(135deg,#FF3D77,#FF7A8E)}.g5{background:linear-gradient(135deg,#FF9F1C,#FFC548)}.g6{background:linear-gradient(135deg,#14123A,#4B3BB5)}
+/* charts */
+.charts{display:grid;grid-template-columns:1fr 1.4fr 1.2fr;gap:14px;margin-bottom:18px}
+@media(max-width:1100px){.charts{grid-template-columns:1fr}}
+.donut-w{display:flex;gap:16px;align-items:center}.donut{width:118px;height:118px;border-radius:50%;position:relative;flex:0 0 auto}
+.donut div{position:absolute;inset:19px;background:var(--sf);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut b{font-size:19px}.donut span{font-size:10px;color:var(--tx3)}
+.lg{display:flex;flex-direction:column;gap:8px;font-size:12px}.lg div{display:flex;gap:8px;align-items:center}.lg i{width:10px;height:10px;border-radius:4px}.lg em{margin-left:auto;color:var(--tx3);font-style:normal;padding-left:10px}
+.bars{display:flex;gap:9px;align-items:flex-end;height:160px}.bc{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:5px;min-width:0}
+.bc i{width:100%;max-width:34px;border-radius:9px 9px 4px 4px;background:linear-gradient(180deg,#FF3D77,#FF9F1C)}.bc small{font-size:10px;color:var(--tx3);font-weight:600;white-space:nowrap}.bc b{font-size:10px;color:var(--tx2)}
+.two{display:grid;grid-template-columns:1fr 1.3fr;gap:14px;margin-bottom:18px}@media(max-width:1000px){.two{grid-template-columns:1fr}}
+.pc{display:grid;grid-template-columns:90px 1fr 92px;gap:10px;align-items:center;font-size:12.5px;margin-bottom:10px}
+.pc .l{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pc .trk i{background:linear-gradient(90deg,#6C4DFF,#FF3D77)}.pc .v{text-align:right;font-weight:700}
+.top-row2{display:grid;grid-template-columns:28px 1fr 100px 110px 80px;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--bd);cursor:pointer;border-radius:10px}
+.top-row2:hover{background:var(--sf2)}.rk{width:26px;height:26px;border-radius:50%;background:var(--pinkt);color:var(--pink);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.tr-ref{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tr-sub{font-size:11px;color:var(--tx3)}.tr-amt{font-weight:800;text-align:right;color:var(--pink)}.tr-d{text-align:right;font-size:12px;color:var(--tx2)}
+.empty{padding:28px;text-align:center;color:var(--tx3);font-size:13px}
+/* table */
+.tcard{background:var(--sf);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.tt{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid var(--bd);gap:10px;flex-wrap:wrap}
+.tt h3{margin:0;font-size:15px;font-weight:800}.cnt{margin-left:9px;font-size:11.5px;font-weight:700;background:var(--blut);color:var(--blu);padding:4px 11px;border-radius:20px}
+.ts{overflow:auto;max-height:580px}table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:1500px}
+th{position:sticky;top:0;background:var(--ink);color:#fff;text-align:left;padding:11px 12px;font-size:11.5px;font-weight:700;white-space:nowrap;cursor:pointer;z-index:5}
+td{padding:9px 12px;border-bottom:1px solid var(--bd);white-space:nowrap}tbody tr{border-left:4px solid transparent}tbody tr:hover{background:var(--sf2)}
+tr.sub td{color:var(--tx3);font-style:italic}
+tr.e-c{border-left-color:var(--mint)}tr.e-p{border-left-color:var(--blu)}tr.e-n{border-left-color:var(--pink);background:linear-gradient(90deg,var(--pinkt),transparent 30%)}tr.e-k{border-left-color:var(--amb)}
+.neg{color:var(--pink);font-weight:700}.pos{color:var(--mint);font-weight:700}
+.tag{font-weight:700;color:var(--vio);background:var(--sf2);border:1px solid var(--bd);padding:3px 9px;border-radius:8px;font-size:11.5px}
+.st{display:inline-flex;gap:6px;align-items:center;font-size:11px;font-weight:800;padding:5px 11px;border-radius:20px}.st:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-c{background:var(--mintt);color:var(--mint)}.st-p{background:var(--blut);color:var(--blu)}.st-n{background:var(--pinkt);color:var(--pink)}.st-k{background:var(--ambt);color:var(--amb)}
+.ty{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:7px;background:var(--sf2)}.ty-WE{color:var(--blu);background:var(--blut)}.ty-RE{color:var(--vio);background:#E9E5FF}
+.ni{width:170px;font-size:12px;padding:6px 9px}
+.pg{display:flex;justify-content:space-between;align-items:center;padding:13px 18px;border-top:1px solid var(--bd);font-size:12.5px;color:var(--tx2)}
+.pg button{border:1.5px solid var(--bd);background:var(--sf);color:var(--tx);border-radius:10px;padding:6px 14px;font-weight:700;margin-left:6px}.pg button:disabled{opacity:.4}
+footer{text-align:center;margin-top:22px;font-size:11.5px;color:var(--tx3)}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="top"><div class="top-row">
+  <div><h1>GR/IR Reconciliation Console</h1><p>Upload a SAP GR/IR export · auto-match MIGO &amp; MIRO · spot what is still pending</p></div>
+  <div class="acts">
+    <button class="btn" id="resetFiltersBtn" hidden>Reset filters</button>
+    <button class="btn" id="newFileBtn" hidden>Upload new file</button>
+    <button class="btn pri" id="exportBtn" hidden>Download Excel</button>
+  </div></div></div>
+
+<div id="emptyState">
+  <h2>Drop your SAP GR/IR export here</h2>
+  <p>Any month, or several at once. References are grouped, MIGO is matched against MIRO, and pending MIRO postings are put front and centre.</p>
+  <button class="btn solid" id="browseBtn">Choose Excel file</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+  <div class="chips"><span>Document Number</span><span>Document Type</span><span>Reference</span><span>Document Date</span><span>Posting Date</span><span>Amount in Local Currency</span><span>Profit Center</span></div>
+  <div class="note"><b>What happens automatically</b><ul>
+    <li>All filtering uses <b>Posting Date</b>.</li>
+    <li>RE (MIRO) line present: net zero is Completed, non-zero is Partially Done.</li>
+    <li>No RE line: non-zero balance is Pending, net zero is Needs check (usually a GR reversal).</li>
+    <li>SAP subtotal rows (blank Document Number) are excluded from every sum; nets are rounded to 2 decimals before the zero check.</li>
+    <li>Reference status is always computed from the complete file; filters only change what is displayed.</li>
+    <li>Notes are saved in this browser only.</li></ul></div>
+</div>
+
+<div id="dashboard" hidden>
+  <div class="fbar">
+    <div class="fr"><span class="fl">Posting date</span>
+      <button class="pill active" data-range="all">All time</button><button class="pill" data-range="today">Today</button><button class="pill" data-range="week">This week</button><button class="pill" data-range="month">This month</button><button class="pill" data-range="lastmonth">Last month</button><button class="pill" data-range="quarter">This quarter</button><button class="pill" data-range="fy">This FY</button><button class="pill" data-range="custom">Custom</button>
+      <span id="customWrap" hidden class="fr"><input type="date" id="customFrom"><span>to</span><input type="date" id="customTo"></span>
+      <div class="dd"><button class="pill" id="monthBtn">Months <span id="monthCnt"></span></button><div class="ddp" id="monthPanel" hidden></div></div>
+    </div>
+    <div class="fr"><span class="fl">Status</span>
+      <button class="pill active" data-status="all">All</button>
+      <button class="pill s-n" data-status="MIRO Pending">Pending MIRO</button>
+      <button class="pill s-p" data-status="MIRO Partially Done">Partially done</button>
+      <button class="pill s-c" data-status="MIRO Completed">Completed</button>
+      <button class="pill s-k" data-status="Check">Needs check</button>
+      <label class="sw">Show subtotal rows <input type="checkbox" id="subToggle"></label>
+      <label class="sw mat">Ignore diffs under ₹ <input type="number" id="matInput" min="0" step="1" value="0"></label>
+      <div class="spacer"></div>
+      <input type="text" id="searchBox" placeholder="Search Reference, Doc No. or Profit Center" style="width:260px">
+    </div>
+  </div>
+
+  <div class="focus">
+    <div class="hero" id="heroPending" title="Click to filter the table to Pending MIRO"></div>
+    <div class="card"><h3>Pending ageing</h3><div class="sub">Days since earliest GR posting, pending references only</div><div class="ag" id="pendAging"></div></div>
+    <div class="card"><h3>Pending by profit center</h3><div class="sub">Top profit centers by pending value</div><div id="pendPC"></div></div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="charts">
+    <div class="card"><h3>Match status</h3><div class="sub">Share of references in view</div>
+      <div class="donut-w"><div class="donut" id="donut"><div><b id="donutTotal">0</b><span>refs</span></div></div><div class="lg" id="legend"></div></div></div>
+    <div class="card"><h3>Open value by month</h3><div class="sub">Pending + Partially done, by Posting Date</div><div class="bars" id="trend"></div></div>
+    <div class="card"><h3>Ageing of all open references</h3><div class="sub">Pending + Partially done</div><div class="ag" id="aging"></div></div>
+  </div>
+
+  <div class="two">
+    <div class="card"><h3>Largest pending MIRO</h3><div class="sub">Pending references only · click one to find it in the table</div><div id="topPending"></div></div>
+    <div class="card"><h3>Largest partially done</h3><div class="sub">Invoice booked, balance still open</div><div id="topPartial"></div></div>
+  </div>
+
+  <div class="tcard">
+    <div class="tt"><div style="display:flex;align-items:center"><h3>Line items</h3><span class="cnt" id="rowCnt">0 rows</span></div><span style="font-size:11.5px;color:var(--tx3)">Click a column header to sort</span></div>
+    <div class="ts"><table><thead><tr id="headRow"></tr></thead><tbody id="body"></tbody></table></div>
+    <div class="pg"><div id="pgInfo"></div><div><button id="pgPrev">Prev</button><button id="pgNext">Next</button></div></div>
+  </div>
+</div>
+<footer>Processed entirely in your browser. Notes are saved locally.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---- 1. column detection (unchanged) ---- */
+const CM={docNumber:["document number","doc number","doc no","document no"],docType:["document type","doc type"],reference:["reference"],profitCenter:["profit center","profit centre","profit ctr","prctr"],docDate:["document date","doc date"],postingDate:["posting date"],postingKey:["posting key","pk"],amount:["amount in local currency","amount local currency","local currency amount","amount"],currency:["local currency","currency"]};
+const nh=h=>String(h||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function detectColumns(hr){
+  const norm=hr.map(nh),used=new Set(),map={},f=Object.keys(CM);
+  f.forEach(k=>{const c=CM[k].map(nh);for(let i=0;i<norm.length;i++){if(used.has(i))continue;if(c.includes(norm[i])){map[k]=i;used.add(i);break;}}});
+  f.forEach(k=>{if(map[k]!==undefined)return;const c=CM[k].map(nh);let b=-1;for(let i=0;i<norm.length;i++){if(used.has(i))continue;if(c.some(x=>norm[i].includes(x))){b=i;break;}}map[k]=b;if(b!==-1)used.add(b);});
+  f.forEach(k=>{if(map[k]===undefined)map[k]=-1;});return map;
+}
+
+/* ---- 2. dates (unchanged) ---- */
+const excelSerialToDate=s=>new Date(Math.round((s-25569)*86400*1000));
+function parseDateValue(v){
+  if(v===null||v===undefined||v==="")return null;
+  if(v instanceof Date&&!isNaN(v))return v;
+  if(typeof v==="number")return excelSerialToDate(v);
+  const s=String(v).trim();if(!s)return null;
+  let m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);
+  m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  const d=new Date(s);return isNaN(d)?null:d;
+}
+const pad2=n=>String(n).padStart(2,"0");
+const fmtDate=d=>d?`${pad2(d.getDate())}-${pad2(d.getMonth()+1)}-${d.getFullYear()}`:"";
+const MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtMonthYear=d=>d?`${MN[d.getMonth()]} ${d.getFullYear()}`:"";
+const monthKey=d=>d?`${d.getFullYear()}-${pad2(d.getMonth()+1)}`:"";
+const daysBetween=(a,b)=>Math.round((b-a)/86400000);
+function startOfWeek(d){const x=new Date(d);x.setDate(x.getDate()-(x.getDay()+6)%7);x.setHours(0,0,0,0);return x;}
+function fyRange(d){const y=d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;return[new Date(y,3,1),new Date(y+1,2,31,23,59,59)];}
+function quarterRange(d){const q=Math.floor(d.getMonth()/3);return[new Date(d.getFullYear(),q*3,1),new Date(d.getFullYear(),q*3+3,0,23,59,59)];}
+function fmtINR(n){return(n<0?'−':'')+'₹'+Math.abs(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+const fmtNum=n=>n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+function fmtShort(n){n=Math.abs(n);if(n>=1e7)return'₹'+(n/1e7).toFixed(2)+' Cr';if(n>=1e5)return'₹'+(n/1e5).toFixed(2)+' L';return'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:0});}
+
+/* ---- 3. notes ---- */
+const NK="grir_console_notes_v1";let NOTES={};
+try{NOTES=JSON.parse(localStorage.getItem(NK)||"{}");}catch(e){NOTES={};}
+const getNote=r=>NOTES[r]||"";
+function setNote(r,v){if(v&&v.trim())NOTES[r]=v;else delete NOTES[r];try{localStorage.setItem(NK,JSON.stringify(NOTES));}catch(e){}}
+
+/* ---- 4. state ---- */
+let RAW=[],REF=new Map(),ALLM=[],selM=new Set(),qr="all",cF=null,cT=null,sf="all",st="",showSub=false,mat=0,sc="postingDate",sd=-1,page=1;
+const PS=60,OPEN=new Set(["MIRO Pending","MIRO Partially Done"]);
+const COLS=[["docNumber","Document Number"],["docType","Document Type"],["reference","Reference"],["profitCenter","Profit Center"],["docDateFmt","Document Date"],["postingDateFmt","Posting Date"],["postingKey","Posting Key"],["amount","Amount in Local Currency"],["currency","Local Currency"],["rowType","Row Type"],["netAmount","Reference Net Amount"],["reCount","MIRO (RE) Line Count"],["weCount","MIGO (WE) Line Count"],["status","MIRO Status"],["agingDaysDisp","Days Pending"],["postingMonth","Posting Month"],["notes","Notes"]];
+
+/* ---- 5. files ---- */
+const es=$('emptyState'),dash=$('dashboard');
+$('browseBtn').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=e=>{if(e.target.files[0])handleFile(e.target.files[0]);};
+['dragenter','dragover'].forEach(ev=>es.addEventListener(ev,e=>{e.preventDefault();es.classList.add('dragover');}));
+['dragleave','drop'].forEach(ev=>es.addEventListener(ev,e=>{e.preventDefault();es.classList.remove('dragover');}));
+es.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+$('newFileBtn').onclick=()=>{RAW=[];REF=new Map();dash.hidden=true;es.hidden=false;['newFileBtn','exportBtn','resetFiltersBtn'].forEach(i=>$(i).hidden=true);$('fileInput').value="";};
+function handleFile(file){
+  const rd=new FileReader();
+  rd.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});processRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null}));}
+  catch(err){alert("Could not read this file. Please make sure it's a valid Excel export.\n\n"+err.message);}};
+  rd.readAsArrayBuffer(file);
+}
+
+/* ---- 6. processing (unchanged logic) ---- */
+function processRows(rows){
+  if(!rows.length){alert("The file appears to be empty.");return;}
+  const cm=detectColumns(rows[0]);
+  if(cm.reference===-1||cm.amount===-1){alert("Couldn't find a 'Reference' and/or 'Amount in Local Currency' column. Please check the file's headers.");return;}
+  const recs=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];if(!r||r.every(c=>c===null||c===""))continue;
+    const get=x=>x>=0?r[x]:null;
+    const dn=get(cm.docNumber),isSub=dn===null||dn==="",ref=get(cm.reference);
+    if(ref===null||ref==="")continue;
+    const ar=get(cm.amount),amount=typeof ar==="number"?ar:parseFloat(String(ar||"0").replace(/,/g,""))||0;
+    const pc=get(cm.profitCenter);
+    recs.push({docNumber:isSub?"":dn,docType:isSub?"":(get(cm.docType)||""),reference:String(ref).trim(),profitCenter:isSub?"":(pc==null?"":String(pc).trim()),docDate:parseDateValue(get(cm.docDate)),postingDate:parseDateValue(get(cm.postingDate)),postingKey:isSub?"":(get(cm.postingKey)||""),amount,currency:get(cm.currency)||"",rowType:isSub?"Subtotal":"Detail"});
+  }
+  if(!recs.length){alert("No data rows found under the detected headers.");return;}
+  RAW=recs;aggregate();buildMonths();resetState();renderMonths();
+  es.hidden=true;dash.hidden=false;['newFileBtn','exportBtn','resetFiltersBtn'].forEach(i=>$(i).hidden=false);render();
+}
+function aggregate(){
+  REF=new Map();
+  RAW.forEach(r=>{
+    if(r.rowType!=="Detail")return;
+    if(!REF.has(r.reference))REF.set(r.reference,{ref:r.reference,net:0,re:0,we:0,minPostingDate:null,profitCenter:"",invoiceDocDate:null,invoicePostingDate:null});
+    const g=REF.get(r.reference);g.net+=r.amount;
+    if(r.docType==="RE")g.re++;else if(r.docType==="WE")g.we++;
+    if(!g.profitCenter&&r.profitCenter)g.profitCenter=r.profitCenter;
+    if(r.postingDate&&(!g.minPostingDate||r.postingDate<g.minPostingDate))g.minPostingDate=r.postingDate;
+    if(r.docType==="RE"&&r.postingDate&&(!g.invoicePostingDate||r.postingDate>g.invoicePostingDate)){g.invoicePostingDate=r.postingDate;g.invoiceDocDate=r.docDate;}
+  });
+  const today=new Date();
+  REF.forEach(g=>{
+    g.net=Math.round(g.net*100)/100;if(g.net===0)g.net=0;
+    const w=Math.abs(g.net)<=mat;
+    g.status=g.re>0?(w?"MIRO Completed":"MIRO Partially Done"):(w?"Check: Net Zero, No MIRO (Reversal?)":"MIRO Pending");
+    g.agingDays=(OPEN.has(g.status)&&g.minPostingDate)?daysBetween(g.minPostingDate,today):null;
+  });
+  RAW.forEach(r=>{
+    const g=REF.get(r.reference);
+    r.netAmount=g?g.net:r.amount;r.reCount=g?g.re:0;r.weCount=g?g.we:0;r.status=g?g.status:"";r.agingDays=g?g.agingDays:null;
+    r.agingDaysDisp=(r.rowType==="Detail"&&r.agingDays!==null)?r.agingDays:"";
+    r.docDateFmt=fmtDate(r.docDate);r.postingDateFmt=fmtDate(r.postingDate);r.postingMonth=r.postingDate?fmtMonthYear(r.postingDate):"";
+    if(r.rowType==="Subtotal"&&g&&g.profitCenter)r.profitCenter=g.profitCenter;
+  });
+}
+function buildMonths(){const s=new Set();RAW.forEach(r=>{if(r.postingDate)s.add(monthKey(r.postingDate));});ALLM=Array.from(s).sort();selM=new Set(ALLM);}
+function resetState(){
+  qr="all";cF=null;cT=null;sf="all";st="";showSub=false;page=1;mat=0;selM=new Set(ALLM);
+  $('searchBox').value="";$('matInput').value="0";$('subToggle').checked=false;$('customWrap').hidden=true;$('customFrom').value="";$('customTo').value="";
+  document.querySelectorAll('[data-range]').forEach(b=>b.classList.toggle('active',b.dataset.range==="all"));
+  document.querySelectorAll('[data-status]').forEach(b=>b.classList.toggle('active',b.dataset.status==="all"));
+}
+$('resetFiltersBtn').onclick=()=>{resetState();aggregate();renderMonths();render();};
+
+/* ---- 7. filtering (unchanged) ---- */
+function getRange(){
+  const n=new Date();
+  if(qr==="today")return[new Date(n.getFullYear(),n.getMonth(),n.getDate()),new Date(n.getFullYear(),n.getMonth(),n.getDate(),23,59,59)];
+  if(qr==="week"){const s=startOfWeek(n),e=new Date(s);e.setDate(e.getDate()+6);e.setHours(23,59,59);return[s,e];}
+  if(qr==="month")return[new Date(n.getFullYear(),n.getMonth(),1),new Date(n.getFullYear(),n.getMonth()+1,0,23,59,59)];
+  if(qr==="lastmonth")return[new Date(n.getFullYear(),n.getMonth()-1,1),new Date(n.getFullYear(),n.getMonth(),0,23,59,59)];
+  if(qr==="quarter")return quarterRange(n);
+  if(qr==="fy")return fyRange(n);
+  if(qr==="custom"){if(!cF||!cT)return null;const t=new Date(cT);t.setHours(23,59,59);return[new Date(cF),t];}
+  return null;
+}
+const statusMatches=(s,f)=>f==="all"?true:f==="Check"?s.startsWith("Check"):s===f;
+function filtered(){
+  const range=getRange(),q=st.trim().toLowerCase(),all=selM.size===ALLM.length;
+  return RAW.filter(r=>{
+    if(!showSub&&r.rowType==="Subtotal")return false;
+    if(!statusMatches(r.status,sf))return false;
+    if(q&&!(String(r.reference)+" "+String(r.docNumber)+" "+String(r.profitCenter)).toLowerCase().includes(q))return false;
+    const d=r.postingDate;
+    if(!all){if(!d||!selM.has(monthKey(d)))return false;}
+    if(range){if(!d||d<range[0]||d>range[1])return false;}
+    return true;
+  });
+}
+function sortRecs(list){
+  return list.slice().sort((a,b)=>{
+    let av=a[sc],bv=b[sc];
+    if(sc==="docDateFmt"){av=a.docDate;bv=b.docDate;}
+    if(sc==="postingDateFmt"){av=a.postingDate;bv=b.postingDate;}
+    if(sc==="notes"){av=getNote(a.reference);bv=getNote(b.reference);}
+    if(av instanceof Date||bv instanceof Date){av=av?av.getTime():-Infinity;bv=bv?bv.getTime():-Infinity;}
+    if(typeof av==="string")av=av.toLowerCase();if(typeof bv==="string")bv=bv.toLowerCase();
+    if(av===bv)return 0;if(av==null||av==="")return 1;if(bv==null||bv==="")return -1;
+    return av>bv?sd:-sd;
+  });
+}
+
+/* ---- 8. controls ---- */
+document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{qr=b.dataset.range;document.querySelectorAll('[data-range]').forEach(x=>x.classList.toggle('active',x===b));$('customWrap').hidden=qr!=="custom";page=1;render();});
+$('customFrom').onchange=e=>{cF=e.target.value;page=1;render();};$('customTo').onchange=e=>{cT=e.target.value;page=1;render();};
+function setStatus(v){sf=v;document.querySelectorAll('[data-status]').forEach(x=>x.classList.toggle('active',x.dataset.status===v));page=1;render();}
+document.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>setStatus(b.dataset.status));
+let t1;$('searchBox').oninput=e=>{clearTimeout(t1);t1=setTimeout(()=>{st=e.target.value;page=1;render();},150);};
+$('subToggle').onchange=e=>{showSub=e.target.checked;page=1;render();};
+let t2;$('matInput').oninput=e=>{clearTimeout(t2);t2=setTimeout(()=>{const v=parseFloat(e.target.value);mat=isNaN(v)||v<0?0:v;aggregate();page=1;render();},250);};
+$('monthBtn').onclick=()=>{$('monthPanel').hidden=!$('monthPanel').hidden;};
+document.addEventListener('click',e=>{if(!e.target.closest('.dd'))$('monthPanel').hidden=true;});
+function renderMonths(){
+  const p=$('monthPanel');p.innerHTML="";
+  const list=document.createElement('div');list.className="ddl";
+  ALLM.forEach(mk=>{const[y,m]=mk.split("-");const l=document.createElement('label');l.innerHTML=`<input type="checkbox" ${selM.has(mk)?'checked':''}> ${MN[+m-1]} ${y}`;
+    l.querySelector('input').onchange=ev=>{ev.target.checked?selM.add(mk):selM.delete(mk);cnt();page=1;render();};list.appendChild(l);});
+  if(!ALLM.length)list.innerHTML='<div class="empty">No dated rows found.</div>';
+  p.appendChild(list);
+  const a=document.createElement('div');a.className="dda";a.innerHTML='<button id="mmAll">Select all</button><button id="mmNone">Clear all</button>';p.appendChild(a);
+  a.querySelector('#mmAll').onclick=()=>{selM=new Set(ALLM);renderMonths();page=1;render();};
+  a.querySelector('#mmNone').onclick=()=>{selM=new Set();renderMonths();page=1;render();};
+  cnt();
+}
+function cnt(){$('monthCnt').textContent=selM.size===ALLM.length?"":`(${selM.size})`;}
+
+/* ---- 9. render: pending focus ---- */
+const BK=[["0–15d",0,15,"#00B887"],["16–30d",16,30,"#12B5D6"],["31–60d",31,60,"#FF9F1C"],["60d+",61,Infinity,"#FF3D77"]];
+function renderPending(refs){
+  const pend=refs.filter(g=>g.status==="MIRO Pending");
+  const val=pend.reduce((s,g)=>s+Math.abs(g.net),0);
+  const ages=pend.map(g=>g.agingDays||0);
+  const oldest=ages.length?Math.max(...ages):0,avg=ages.length?Math.round(ages.reduce((a,b)=>a+b,0)/ages.length):0;
+  const share=refs.length?Math.round(pend.length/refs.length*100):0;
+  $('heroPending').innerHTML=`<h2>Pending MIRO: goods received, invoice not posted</h2>
+    <div><div class="big">${pend.length.toLocaleString('en-IN')}</div><div style="font-size:12.5px;opacity:.9;margin-top:4px">references pending (${share}% of references in view)</div></div>
+    <div class="val">${fmtINR(val)}</div>
+    <div class="mini"><div><b>${oldest}d</b><span>Oldest</span></div><div><b>${avg}d</b><span>Average age</span></div><div><b>${pend.filter(g=>(g.agingDays||0)>60).length}</b><span>Over 60 days</span></div></div>`;
+  const cn=BK.map(b=>pend.filter(g=>(g.agingDays||0)>=b[1]&&(g.agingDays||0)<=b[2]));
+  const mx=Math.max(1,...cn.map(c=>c.length));
+  $('pendAging').innerHTML=BK.map((b,i)=>`<div class="agr"><span class="l">${b[0]}</span><span class="trk"><i style="width:${cn[i].length/mx*100}%;background:${b[3]}"></i></span><span class="v">${cn[i].length} refs<small>${fmtShort(cn[i].reduce((s,g)=>s+Math.abs(g.net),0))}</small></span></div>`).join("");
+  const by=new Map();pend.forEach(g=>{const k=g.profitCenter||"(none)";by.set(k,(by.get(k)||0)+Math.abs(g.net));});
+  const arr=Array.from(by.entries()).sort((a,b)=>b[1]-a[1]).slice(0,6),m2=Math.max(1,...arr.map(a=>a[1]));
+  $('pendPC').innerHTML=arr.length?arr.map(a=>`<div class="pc"><span class="l" title="${esc(a[0])}">${esc(a[0])}</span><span class="trk"><i style="width:${a[1]/m2*100}%"></i></span><span class="v">${fmtShort(a[1])}</span></div>`).join(""):'<div class="empty">No pending references in view</div>';
+}
+$('heroPending').onclick=()=>{setStatus("MIRO Pending");$('body').closest('.tcard').scrollIntoView({behavior:"smooth",block:"start"});};
+
+function renderKPIs(refs){
+  const n=refs.length,c=refs.filter(g=>g.status==="MIRO Completed").length,pa=refs.filter(g=>g.status==="MIRO Partially Done"),pe=refs.filter(g=>g.status==="MIRO Pending");
+  const op=refs.filter(g=>OPEN.has(g.status)),ck=refs.filter(g=>g.status.startsWith("Check")).length;
+  const ov=op.reduce((s,g)=>s+Math.abs(g.net),0),av=op.length?Math.round(op.reduce((s,g)=>s+(g.agingDays||0),0)/op.length):0;
+  const cards=[["g1","References",n.toLocaleString('en-IN'),"in current view"],["g2","Completed",c.toLocaleString('en-IN'),n?Math.round(c/n*100)+"% matched":"—"],["g3","Partially done",pa.length.toLocaleString('en-IN'),"invoice booked, open balance"],["g4","Pending",pe.length.toLocaleString('en-IN'),"no invoice posted yet"],["g5","Needs check",ck.toLocaleString('en-IN'),"net zero, no MIRO line"],["g6","Open value",fmtShort(ov),"avg. age "+av+" days"]];
+  $('kpis').innerHTML=cards.map(k=>`<div class="kpi ${k[0]}"><div class="k">${k[1]}</div><div class="n">${k[2]}</div><div class="s">${k[3]}</div></div>`).join("");
+}
+function renderDonut(refs){
+  const t=refs.length,cnt=s=>refs.filter(g=>g.status===s).length;
+  const segs=[["Completed",cnt("MIRO Completed"),"#00B887"],["Partially done",cnt("MIRO Partially Done"),"#2F7BFF"],["Pending",cnt("MIRO Pending"),"#FF3D77"],["Needs check",refs.filter(g=>g.status.startsWith("Check")).length,"#FF9F1C"]];
+  $('donutTotal').textContent=t;let acc=0;const stops=[];
+  segs.forEach(s=>{const p=t?s[1]/t*100:0;stops.push(`${s[2]} ${acc}% ${acc+p}%`);acc+=p;});
+  if(!t)stops.push('#ccd 0% 100%');
+  $('donut').style.background=`conic-gradient(${stops.join(",")})`;
+  $('legend').innerHTML=segs.map(s=>`<div><i style="background:${s[2]}"></i>${s[0]} <b>${s[1]}</b><em>${t?Math.round(s[1]/t*100):0}%</em></div>`).join("");
+}
+function renderTrend(rows){
+  const bm=new Map();
+  rows.forEach(r=>{if(r.rowType!=="Detail"||!OPEN.has(r.status)||!r.postingDate)return;const k=monthKey(r.postingDate);if(!bm.has(k))bm.set(k,new Set());bm.get(k).add(r.reference);});
+  const ms=Array.from(bm.keys()).sort().slice(-8);
+  const vs=ms.map(k=>{let s=0;bm.get(k).forEach(ref=>{s+=Math.abs(REF.get(ref).net);});return s;});
+  const mx=Math.max(1,...vs);
+  if(!ms.length){$('trend').innerHTML='<div class="empty">No open references in the current filter</div>';return;}
+  $('trend').innerHTML=ms.map((k,i)=>{const[y,m]=k.split("-");return`<div class="bc" title="${fmtINR(vs[i])}"><b>${fmtShort(vs[i])}</b><i style="height:${Math.max(4,Math.round(vs[i]/mx*112))}px"></i><small>${MN[+m-1]} ${y.slice(2)}</small></div>`;}).join("");
+}
+function renderAging(refs){
+  const op=refs.filter(g=>OPEN.has(g.status)),cn=BK.map(b=>op.filter(g=>(g.agingDays||0)>=b[1]&&(g.agingDays||0)<=b[2]).length),mx=Math.max(1,...cn);
+  $('aging').innerHTML=BK.map((b,i)=>`<div class="agr"><span class="l">${b[0]}</span><span class="trk"><i style="width:${cn[i]/mx*100}%;background:${b[3]}"></i></span><span class="v">${cn[i]} refs</span></div>`).join("");
+}
+function topList(el,refs,status){
+  const l=refs.filter(g=>g.status===status).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)).slice(0,8);
+  const box=$(el);
+  if(!l.length){box.innerHTML='<div class="empty">Nothing here in the current filter.</div>';return;}
+  box.innerHTML=l.map((g,i)=>`<div class="top-row2" data-ref="${esc(g.ref)}"><div class="rk">${i+1}</div><div><div class="tr-ref">${esc(g.ref)}</div><div class="tr-sub">${esc(g.profitCenter)}</div></div><div>${pill(g.status)}</div><div class="tr-amt">${fmtINR(Math.abs(g.net))}</div><div class="tr-d">${g.agingDays!==null?g.agingDays+" days":""}</div></div>`).join("");
+  box.querySelectorAll('.top-row2').forEach(row=>row.onclick=()=>{st=row.dataset.ref;$('searchBox').value=st;page=1;render();$('body').closest('.tcard').scrollIntoView({behavior:"smooth",block:"start"});});
+}
+
+/* ---- 10. table ---- */
+function pill(s){
+  if(!s)return"";
+  if(s==="MIRO Completed")return'<span class="st st-c">Completed</span>';
+  if(s==="MIRO Partially Done")return'<span class="st st-p">Partially done</span>';
+  if(s==="MIRO Pending")return'<span class="st st-n">Pending</span>';
+  return`<span class="st st-k" title="${esc(s)}">Needs check</span>`;
+}
+const edge=s=>s==="MIRO Completed"?"e-c":s==="MIRO Partially Done"?"e-p":s==="MIRO Pending"?"e-n":(s&&s.startsWith("Check"))?"e-k":"";
+function renderHead(){
+  $('headRow').innerHTML=COLS.map(c=>`<th data-col="${c[0]}">${c[1]}${sc===c[0]?(sd===1?' ▲':' ▼'):''}</th>`).join("");
+  document.querySelectorAll('#headRow th').forEach(th=>th.onclick=()=>{const c=th.dataset.col;if(sc===c)sd*=-1;else{sc=c;sd=1;}page=1;render();});
+}
+function renderTable(rows){
+  const total=rows.length,tp=Math.max(1,Math.ceil(total/PS));if(page>tp)page=tp;
+  const s=(page-1)*PS,pr=rows.slice(s,s+PS);
+  if(!pr.length)$('body').innerHTML=`<tr><td colspan="${COLS.length}"><div class="empty">No rows match the current filters.</div></td></tr>`;
+  else{
+    $('body').innerHTML=pr.map(r=>{
+      const cls=[r.rowType==="Subtotal"?"sub":"",edge(r.status)].filter(Boolean).join(" ");
+      const ac=r.amount<0?"neg":(r.amount>0?"pos":""),nc=r.netAmount<0?"neg":(r.netAmount>0?"pos":"");
+      return`<tr class="${cls}"><td>${esc(r.docNumber)}</td><td>${r.docType?`<span class="ty ty-${esc(r.docType)}">${esc(r.docType)}</span>`:""}</td><td><b>${esc(r.reference)}</b></td><td>${r.profitCenter?`<span class="tag">${esc(r.profitCenter)}</span>`:""}</td><td>${r.docDateFmt}</td><td>${r.postingDateFmt}</td><td>${esc(r.postingKey)}</td><td class="${ac}">${fmtNum(r.amount)}</td><td>${esc(r.currency)}</td><td>${r.rowType}</td><td class="${nc}">${fmtNum(r.netAmount)}</td><td>${r.reCount}</td><td>${r.weCount}</td><td>${pill(r.status)}</td><td>${r.agingDaysDisp}</td><td>${r.postingMonth}</td><td><input class="ni" type="text" placeholder="Add note…" value="${esc(getNote(r.reference))}" data-ref="${esc(r.reference)}"></td></tr>`;
+    }).join("");
+    document.querySelectorAll('.ni').forEach(i=>i.oninput=()=>setNote(i.dataset.ref,i.value));
+  }
+  $('rowCnt').textContent=total.toLocaleString('en-IN')+" rows";
+  $('pgInfo').textContent=total?`Showing ${s+1}–${Math.min(s+PS,total)} of ${total.toLocaleString('en-IN')}`:"Showing 0–0 of 0";
+  $('pgPrev').disabled=page<=1;$('pgNext').disabled=page>=tp;
+}
+$('pgPrev').onclick=()=>{if(page>1){page--;render();}};$('pgNext').onclick=()=>{page++;render();};
+
+/* ---- 11. master render ---- */
+function render(){
+  const rows=filtered(),refs=Array.from(new Set(rows.map(r=>r.reference))).map(x=>REF.get(x)).filter(Boolean);
+  renderPending(refs);renderKPIs(refs);renderDonut(refs);renderTrend(rows);renderAging(refs);
+  topList('topPending',refs,"MIRO Pending");topList('topPartial',refs,"MIRO Partially Done");
+  renderHead();renderTable(sortRecs(rows));
+}
+
+/* ---- 12. export (unchanged) ---- */
+$('exportBtn').onclick=()=>{
+  const rows=sortRecs(filtered());
+  const data=rows.map(r=>({"Document Number":r.docNumber,"Document Type":r.docType,"Reference":r.reference,"Document Date":r.docDateFmt,"Posting Date":r.postingDateFmt,"Amount in Local Currency":r.amount,"Profit Center":r.profitCenter}));
+  const sum=Array.from(new Set(rows.map(r=>r.reference))).map(ref=>{
+    const g=REF.get(ref)||{net:0,re:0,we:0,agingDays:null,status:"",profitCenter:"",minPostingDate:null,invoiceDocDate:null,invoicePostingDate:null};
+    return{"Reference":ref,"Profit Center":g.profitCenter,"Net Amount":g.net,"MIRO (RE) Lines":g.re,"MIGO (WE) Lines":g.we,"GR Posting Date (earliest)":g.minPostingDate?fmtDate(g.minPostingDate):"","Invoice Document Date":g.invoiceDocDate?fmtDate(g.invoiceDocDate):"","Invoice Posting Date":g.invoicePostingDate?fmtDate(g.invoicePostingDate):"","Days Pending":g.agingDays===null?"":g.agingDays,"Status":g.status,"Notes":getNote(ref)};
+  });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sum),"Summary");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),"Data");
+  XLSX.writeFile(wb,`GRIR_Reconciliation_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+})();
+</script>
+</body>
+</html>
